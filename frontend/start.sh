@@ -4,4 +4,4 @@ xattr -r -d com.apple.provenance . 2>/dev/null || true
 xattr -r -d com.apple.quarantine . 2>/dev/null || true
 
 # Start the Expo app
-npm start
+sudo npm start
