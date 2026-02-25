@@ -1,2 +1,5 @@
 @echo off
-npm start
+cd frontend
+call npm install
+call npm start
+pause
