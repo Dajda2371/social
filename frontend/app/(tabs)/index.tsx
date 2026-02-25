@@ -1,98 +1,184 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useState, useEffect, useCallback } from 'react';
+import { StyleSheet, View, Text, FlatList, Image, SafeAreaView, Platform, RefreshControl, Dimensions } from 'react-native';
+import { Video, ResizeMode } from 'expo-av';
+import axios from 'axios';
+import { useFocusEffect } from 'expo-router';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
-import { ThemedText } from '@/components/themed-text';
-import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+// Adjust this URL if testing on a physical device by replacing with your computer's local network IP.
+const API_URL = Platform.OS === 'ios' ? 'http://localhost:8000/api' : 'http://10.0.2.2:8000/api';
 
-export default function HomeScreen() {
+const { width } = Dimensions.get('window');
+
+interface MediaItem {
+  id: number;
+  filename: string;
+  content_type: string;
+  uploaded_at: string;
+}
+
+export default function FeedScreen() {
+  const [mediaList, setMediaList] = useState<MediaItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const fetchMedia = async () => {
+    try {
+      const response = await axios.get(`${API_URL}/media`);
+      // Reverse array so newest items show first
+      setMediaList(response.data.reverse());
+    } catch (error) {
+      console.error('Fetch media error:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchMedia();
+  }, []);
+
+  // Refresh feed whenever the screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchMedia();
+    }, [])
+  );
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchMedia();
+  };
+
+  const renderItem = ({ item }: { item: MediaItem }) => {
+    const isVideo = item.content_type.startsWith('video');
+    const mediaUrl = `${API_URL}/media/${item.id}`;
+
+    return (
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <View style={styles.avatar} />
+          <Text style={styles.username}>User</Text>
+          <Text style={styles.dateText}>
+            {new Date(item.uploaded_at).toLocaleDateString()}
+          </Text>
+        </View>
+
+        {isVideo ? (
+          <Video
+            source={{ uri: mediaUrl }}
+            style={styles.mediaContent}
+            useNativeControls
+            resizeMode={ResizeMode.CONTAIN}
+            isLooping
+            shouldPlay={false} // Prevent all videos from playing at once
+          />
+        ) : (
+          <Image
+            source={{ uri: mediaUrl }}
+            style={styles.mediaContent}
+            resizeMode="contain"
+          />
+        )}
+      </View>
+    );
+  };
+
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+    <SafeAreaView style={styles.container}>
+      <Text style={styles.headerTitle}>Social Feed</Text>
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      {loading ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>Loading...</Text>
+        </View>
+      ) : mediaList.length === 0 ? (
+        <View style={styles.emptyContainer}>
+          <Text style={styles.emptyText}>No posts yet.</Text>
+          <Text style={styles.subText}>Upload a video or image via the Explore tab.</Text>
+        </View>
+      ) : (
+        <FlatList
+          data={mediaList}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={renderItem}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#ffffff" />
+          }
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+        />
+      )}
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
+  container: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  headerTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#ffffff',
+    marginHorizontal: 15,
+    marginTop: 20,
+    marginBottom: 10,
+  },
+  listContainer: {
+    paddingBottom: 20,
+  },
+  card: {
+    backgroundColor: '#111111',
+    marginVertical: 10,
+    borderTopWidth: 0.5,
+    borderBottomWidth: 0.5,
+    borderColor: '#333333',
+  },
+  cardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    padding: 12,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  avatar: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#333333',
+    marginRight: 10,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
+  username: {
+    color: '#ffffff',
+    fontWeight: '600',
+    fontSize: 16,
+    flex: 1,
+  },
+  dateText: {
+    color: '#8e8e93',
+    fontSize: 12,
+  },
+  mediaContent: {
+    width: width,
+    height: width, // Square aspect ratio container, but content scales
+    backgroundColor: '#000000',
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  emptyText: {
+    color: '#ffffff',
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  subText: {
+    color: '#8e8e93',
+    textAlign: 'center',
+    fontSize: 16,
+    lineHeight: 24,
   },
 });
