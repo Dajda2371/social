@@ -1,8 +1,8 @@
 #!/bin/bash
 cd backend || exit
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
 fi
-source venv/bin/activate
+source .venv/bin/activate
 pip install -r requirements.txt
 uvicorn main:app --reload
