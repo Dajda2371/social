@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, DateTime
 from datetime import datetime
-from data.database import Base
+from database import Base
 
 class Media(Base):
     __tablename__ = "media"

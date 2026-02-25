@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from api import upload_media, get_media
-from data import models, database
+import models, database
 from fastapi.middleware.cors import CORSMiddleware
 
 models.Base.metadata.create_all(bind=database.engine)
