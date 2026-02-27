@@ -5,5 +5,5 @@ if not exist ".venv" (
 )
 call .venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload
+uvicorn main:app --reload --host 0.0.0.0
 pause
