@@ -66,3 +66,7 @@ def login_user(user: UserLogin, db: Session = Depends(database.get_db)):
         
     access_token = create_access_token(data={"sub": db_user.username})
     return {"access_token": access_token, "token_type": "bearer"}
+
+@router.post("/logout")
+def logout():
+    return {"message": "Successfully logged out"}
