@@ -10,4 +10,7 @@ fi
 
 cd frontend || exit 1
 npm install
-npx expo start --lan --web --port 8081
+
+# Start Expo and open web automatically
+npx expo start --lan --port 8081
+
