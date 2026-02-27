@@ -10,4 +10,4 @@ fi
 
 cd frontend || exit 1
 npm install
-npm start
+npx expo start --lan --web --port 8081
