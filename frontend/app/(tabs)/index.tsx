@@ -1,11 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, FlatList, Image, SafeAreaView, Platform, RefreshControl, Dimensions } from 'react-native';
+import { StyleSheet, View, Text, FlatList, Image, SafeAreaView, RefreshControl, Dimensions } from 'react-native';
 import { Video, ResizeMode } from 'expo-av';
 import axios from 'axios';
 import { useFocusEffect } from 'expo-router';
 
-// Adjust this URL if testing on a physical device by replacing with your computer's local network IP.
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:8000/api' : 'http://10.0.2.2:8000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width } = Dimensions.get('window');
 

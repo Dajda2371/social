@@ -2,6 +2,9 @@
 
 backend/data
 backend/.venv
+__pycache__
+
+.env
 
 # dependencies
 node_modules/

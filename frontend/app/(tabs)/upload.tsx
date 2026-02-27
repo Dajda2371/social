@@ -5,8 +5,7 @@ import { Video, ResizeMode } from 'expo-av';
 import axios from 'axios';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-// Change this to your computer's local IP address if testing on a physical device
-const API_URL = Platform.OS === 'ios' ? 'http://localhost:8000/api' : 'http://10.0.2.2:8000/api';
+const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 export default function UploadScreen() {
   const [media, setMedia] = useState<ImagePicker.ImagePickerAsset | null>(null);
