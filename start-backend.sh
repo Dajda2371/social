@@ -1,8 +1,7 @@
 #!/bin/bash
-set -e
 
 # Kill any process already using port 8000
-PID=$(lsof -ti :8000)
+PID=$(lsof -ti :8000 2>/dev/null || true)
 if [ -n "$PID" ]; then
     echo "Killing process on port 8000 (PID: $PID)..."
     kill -9 $PID
