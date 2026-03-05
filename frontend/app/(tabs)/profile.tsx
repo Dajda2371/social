@@ -94,40 +94,41 @@ export default function ProfileScreen() {
     };
 
     const handleLogout = async () => {
-        Alert.alert(
-            'Logout',
-            'Are you sure you want to log out?',
-            [
-                {
-                    text: 'Cancel',
-                    style: 'cancel',
-                },
-                {
-                    text: 'Logout',
-                    style: 'destructive',
-                    onPress: async () => {
-                        try {
-                            const token = await AsyncStorage.getItem('userToken');
-                            if (token) {
-                                await axios.post(`${API_URL}/auth/logout`, {}, {
-                                    headers: { Authorization: `Bearer ${token}` }
-                                });
-                            }
-                        } catch (error) {
-                            console.error('Logout error:', error);
-                        } finally {
-                            await AsyncStorage.clear();
-                            if (Platform.OS === 'web') {
-                                window.sessionStorage.clear();
-                                window.localStorage.clear();
-                            }
-                            // Navigate explicitly to the login screen after wiping session
-                            router.replace('/login' as any);
-                        }
-                    },
-                },
-            ]
-        );
+        const performLogout = async () => {
+            try {
+                const token = await AsyncStorage.getItem('userToken');
+                if (token) {
+                    await axios.post(`${API_URL}/auth/logout`, {}, {
+                        headers: { Authorization: `Bearer ${token}` }
+                    });
+                }
+            } catch (error) {
+                console.error('Logout error:', error);
+            } finally {
+                await AsyncStorage.removeItem('userToken');
+                if (Platform.OS === 'web') {
+                    window.sessionStorage.clear();
+                    window.localStorage.clear();
+                }
+                router.replace('/login' as any);
+            }
+        };
+
+        if (Platform.OS === 'web') {
+            const confirmed = window.confirm('Are you sure you want to log out?');
+            if (confirmed) {
+                performLogout();
+            }
+        } else {
+            Alert.alert(
+                'Logout',
+                'Are you sure you want to log out?',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Logout', style: 'destructive', onPress: performLogout },
+                ]
+            );
+        }
     };
 
     const renderGridItem = ({ item }: { item: MediaItem }) => {
