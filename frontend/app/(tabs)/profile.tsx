@@ -107,12 +107,18 @@ export default function ProfileScreen() {
                     style: 'destructive',
                     onPress: async () => {
                         try {
-                            await axios.post(`${API_URL}/auth/logout`);
+                            const token = await AsyncStorage.getItem('userToken');
+                            if (token) {
+                                await axios.post(`${API_URL}/auth/logout`, {}, {
+                                    headers: { Authorization: `Bearer ${token}` }
+                                });
+                            }
                         } catch (error) {
                             console.error('Logout error:', error);
                         } finally {
                             await AsyncStorage.removeItem('userToken');
-                            router.replace('/login' as any);
+                            // Navigate out of the Tabs layout back precisely back to login
+                            router.replace('/');
                         }
                     },
                 },
