@@ -117,8 +117,8 @@ export default function ProfileScreen() {
                             console.error('Logout error:', error);
                         } finally {
                             await AsyncStorage.removeItem('userToken');
-                            // Navigate out of the Tabs layout back precisely back to login
-                            router.replace('/');
+                            // Navigate explicitly to the login screen after wiping session
+                            router.replace('/login' as any);
                         }
                     },
                 },
