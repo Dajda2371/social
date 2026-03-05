@@ -6,7 +6,6 @@ import { useFocusEffect, useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
-
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
 const { width } = Dimensions.get('window');
@@ -18,6 +17,9 @@ interface MediaItem {
   uploaded_at: string;
   user_id: number | null;
   username: string | null;
+  likes_count: number;
+  comments_count: number;
+  is_liked: boolean;
 }
 
 // Simple JWT decode (base64) - no verification needed client-side
@@ -60,7 +62,9 @@ export default function FeedScreen() {
 
   const fetchMedia = async () => {
     try {
-      const response = await axios.get(`${API_URL}/media`);
+      const token = await AsyncStorage.getItem('userToken');
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+      const response = await axios.get(`${API_URL}/media`, { headers });
       // Reverse array so newest items show first
       setMediaList(response.data.reverse());
     } catch (error) {
@@ -115,6 +119,52 @@ export default function FeedScreen() {
     );
   };
 
+  const handleLike = async (mediaId: number) => {
+    const token = await AsyncStorage.getItem('userToken');
+    if (!token) {
+      Alert.alert('Error', 'You must be logged in to like posts.');
+      return;
+    }
+
+    // Optimistically update UI
+    setMediaList((prev) =>
+      prev.map((m) => {
+        if (m.id === mediaId) {
+          return {
+            ...m,
+            is_liked: !m.is_liked,
+            likes_count: m.is_liked ? m.likes_count - 1 : m.likes_count + 1,
+          };
+        }
+        return m;
+      })
+    );
+
+    try {
+      const response = await axios.post(
+        `${API_URL}/media/${mediaId}/like`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      // Sync exact counts if needed
+      setMediaList((prev) =>
+        prev.map((m) =>
+          m.id === mediaId
+            ? { ...m, likes_count: response.data.likes_count, is_liked: response.data.liked }
+            : m
+        )
+      );
+    } catch (error) {
+      console.error('Like error:', error);
+      // Revert optimism if failed
+      fetchMedia();
+    }
+  };
+
+  const openComments = (mediaId: number) => {
+    router.push({ pathname: '/comments' as any, params: { mediaId } });
+  };
+
   const handleUserPress = (username: string) => {
     router.push({ pathname: '/user-profile' as any, params: { username } });
   };
@@ -167,6 +217,25 @@ export default function FeedScreen() {
             resizeMode="contain"
           />
         )}
+
+        {/* Footer Actions */}
+        <View style={styles.cardFooter}>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity style={styles.actionButton} onPress={() => handleLike(item.id)}>
+              <IconSymbol
+                name={item.is_liked ? "heart.fill" : "heart"}
+                size={26}
+                color={item.is_liked ? "#ff3b30" : "#ffffff"}
+              />
+              <Text style={styles.actionText}>{item.likes_count || 0}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.actionButton} onPress={() => openComments(item.id)}>
+              <IconSymbol name="bubble.right" size={24} color="#ffffff" />
+              <Text style={styles.actionText}>{item.comments_count || 0}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </View>
     );
   };
@@ -267,6 +336,24 @@ const styles = StyleSheet.create({
     height: width, // Square aspect ratio container, but content scales
     backgroundColor: '#000000',
   },
+  cardFooter: {
+    padding: 12,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  actionText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginLeft: 6,
+  },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -286,3 +373,4 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
 });
+

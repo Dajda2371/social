@@ -63,7 +63,6 @@ export default function UploadScreen() {
       const token = await AsyncStorage.getItem('userToken');
       const response = await axios.post(`${API_URL}/upload`, formData, {
         headers: {
-          'Content-Type': 'multipart/form-data',
           'Authorization': `Bearer ${token}`,
         },
       });

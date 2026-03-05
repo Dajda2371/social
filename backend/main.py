@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from api import upload_media, get_media, auth
+from api import upload_media, get_media, auth, social
 import models, database
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -18,6 +18,7 @@ app.add_middleware(
 app.include_router(upload_media.router, prefix="/api", tags=["media"])
 app.include_router(get_media.router, prefix="/api", tags=["media"])
 app.include_router(auth.router, prefix="/api/auth", tags=["auth"])
+app.include_router(social.router, prefix="/api", tags=["social"])
 
 @app.get("/")
 def read_root():

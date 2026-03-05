@@ -26,6 +26,10 @@ const MAPPING = {
   'photo.fill': 'photo',
   'arrow.up.circle.fill': 'arrow-upward',
   'arrow.left': 'arrow-back',
+  'heart': 'favorite-border',
+  'heart.fill': 'favorite',
+  'bubble.right': 'chat-bubble-outline',
+  'bubble.right.fill': 'chat-bubble',
 } as IconMapping;
 
 /**
