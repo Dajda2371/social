@@ -1,6 +1,7 @@
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 from sqlalchemy.orm import Session
 import models, database
+from api.deps import get_current_user
 import os
 import shutil
 import uuid
@@ -11,7 +12,11 @@ UPLOAD_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "uplo
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 @router.post("/upload")
-async def upload_media(file: UploadFile = File(...), db: Session = Depends(database.get_db)):
+async def upload_media(
+    file: UploadFile = File(...),
+    db: Session = Depends(database.get_db),
+    current_user: models.User = Depends(get_current_user)
+):
     if not file.content_type.startswith("image/") and not file.content_type.startswith("video/"):
         raise HTTPException(status_code=400, detail="File must be an image or video")
     
@@ -28,10 +33,17 @@ async def upload_media(file: UploadFile = File(...), db: Session = Depends(datab
     db_media = models.Media(
         filename=file.filename,
         content_type=file.content_type,
-        file_path=file_path
+        file_path=file_path,
+        user_id=current_user.id
     )
     db.add(db_media)
     db.commit()
     db.refresh(db_media)
     
-    return {"message": "Successfully uploaded", "id": db_media.id, "filename": db_media.filename, "content_type": db_media.content_type}
+    return {
+        "message": "Successfully uploaded",
+        "id": db_media.id,
+        "filename": db_media.filename,
+        "content_type": db_media.content_type,
+        "username": current_user.username
+    }

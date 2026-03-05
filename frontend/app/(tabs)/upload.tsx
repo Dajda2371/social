@@ -3,6 +3,7 @@ import { StyleSheet, View, Text, TouchableOpacity, Image, ActivityIndicator, Ale
 import * as ImagePicker from 'expo-image-picker';
 import { Video, ResizeMode } from 'expo-av';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
@@ -52,9 +53,11 @@ export default function UploadScreen() {
       // Use local IP for API URL if running on a physical device, 'localhost' works for iOS Simulator
       // Use '10.0.2.2' for Android Emulator
       // Hardcode computer's local network IP if testing on real device
+      const token = await AsyncStorage.getItem('userToken');
       const response = await axios.post(`${API_URL}/upload`, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
+          'Authorization': `Bearer ${token}`,
         },
       });
 

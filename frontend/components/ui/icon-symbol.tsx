@@ -21,6 +21,11 @@ const MAPPING = {
   'person.fill': 'person',
   'rectangle.portrait.and.arrow.right': 'logout',
   'plus.circle.fill': 'add-circle',
+  'trash.fill': 'delete',
+  'xmark.circle.fill': 'cancel',
+  'photo.fill': 'photo',
+  'arrow.up.circle.fill': 'arrow-upward',
+  'arrow.left': 'arrow-back',
 } as IconMapping;
 
 /**
