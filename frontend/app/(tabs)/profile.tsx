@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator, Platform } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -116,7 +116,11 @@ export default function ProfileScreen() {
                         } catch (error) {
                             console.error('Logout error:', error);
                         } finally {
-                            await AsyncStorage.removeItem('userToken');
+                            await AsyncStorage.clear();
+                            if (Platform.OS === 'web') {
+                                window.sessionStorage.clear();
+                                window.localStorage.clear();
+                            }
                             // Navigate explicitly to the login screen after wiping session
                             router.replace('/login' as any);
                         }
