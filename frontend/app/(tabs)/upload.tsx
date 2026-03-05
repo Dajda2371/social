@@ -43,11 +43,18 @@ export default function UploadScreen() {
       mimeType = `image/${fileType}`;
     }
 
-    formData.append('file', {
-      uri: Platform.OS === 'ios' ? media.uri.replace('file://', '') : media.uri,
-      name: `upload.${fileType}`,
-      type: mimeType,
-    } as any);
+    if (Platform.OS === 'web') {
+      // On web, fetch the blob from the uri
+      const res = await fetch(media.uri);
+      const blob = await res.blob();
+      formData.append('file', blob, `upload.${fileType}`);
+    } else {
+      formData.append('file', {
+        uri: Platform.OS === 'ios' ? media.uri.replace('file://', '') : media.uri,
+        name: `upload.${fileType}`,
+        type: mimeType,
+      } as any);
+    }
 
     try {
       // Use local IP for API URL if running on a physical device, 'localhost' works for iOS Simulator

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Session
 import jwt
 import models, database
 
-SECRET_KEY = "mysecretkey"
+SECRET_KEY = "my_super_secret_key_that_is_long_enough_for_jwt_32_bytes"
 ALGORITHM = "HS256"
 
 security = HTTPBearer()

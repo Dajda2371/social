@@ -9,7 +9,7 @@ import os
 
 router = APIRouter()
 
-SECRET_KEY = "mysecretkey"
+SECRET_KEY = "my_super_secret_key_that_is_long_enough_for_jwt_32_bytes"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 1 week
 
