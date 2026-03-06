@@ -64,18 +64,22 @@ function FeedItem({
   const initial = displayName[0]?.toUpperCase() || '?';
 
   const handleImageLoad = (event: any) => {
-    const { width: imgWidth, height: imgHeight } = event.nativeEvent.source;
-    if (imgWidth && imgHeight) {
+    // In React Native Web, event.nativeEvent.source might be undefined.
+    // The width/height might be directly on event.nativeEvent or on the target itself.
+    let imgWidth = event.nativeEvent?.source?.width || event.nativeEvent?.width || event.target?.naturalWidth || event.currentTarget?.naturalWidth;
+    let imgHeight = event.nativeEvent?.source?.height || event.nativeEvent?.height || event.target?.naturalHeight || event.currentTarget?.naturalHeight;
+
+    if (imgWidth && imgHeight && imgWidth > 0) {
       setMediaHeight(screenWidth * (imgHeight / imgWidth));
     }
   };
 
   const handleVideoReadyForDisplay = (event: any) => {
-    if (event.naturalSize) {
-      const { width: vidWidth, height: vidHeight } = event.naturalSize;
-      if (vidWidth && vidHeight) {
-        setMediaHeight(screenWidth * (vidHeight / vidWidth));
-      }
+    let vidWidth = event.naturalSize?.width || event.nativeEvent?.naturalSize?.width || event.target?.videoWidth;
+    let vidHeight = event.naturalSize?.height || event.nativeEvent?.naturalSize?.height || event.target?.videoHeight;
+
+    if (vidWidth && vidHeight && vidWidth > 0) {
+      setMediaHeight(screenWidth * (vidHeight / vidWidth));
     }
   };
 
@@ -108,6 +112,7 @@ function FeedItem({
         <Video
           source={{ uri: mediaUrl }}
           style={[styles.mediaContent, { height: mediaHeight }]}
+          videoStyle={{ width: '100%', height: '100%' }}
           useNativeControls
           resizeMode={ResizeMode.CONTAIN}
           isLooping
