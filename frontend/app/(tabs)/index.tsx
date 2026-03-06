@@ -8,7 +8,7 @@ import { IconSymbol } from '@/components/ui/icon-symbol';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-const { width } = Dimensions.get('window');
+const { width: screenWidth } = Dimensions.get('window');
 
 interface MediaItem {
   id: number;
@@ -37,6 +37,112 @@ function decodeJWT(token: string): any {
   } catch {
     return null;
   }
+}
+
+// Sub-component for each feed item so it can manage its own aspect ratio state
+function FeedItem({
+  item,
+  currentUsername,
+  onDelete,
+  onLike,
+  onComments,
+  onUserPress,
+}: {
+  item: MediaItem;
+  currentUsername: string | null;
+  onDelete: (id: number) => void;
+  onLike: (id: number) => void;
+  onComments: (id: number) => void;
+  onUserPress: (username: string) => void;
+}) {
+  const [mediaHeight, setMediaHeight] = useState(screenWidth * (9 / 16)); // Default 16:9
+
+  const isVideo = item.content_type.startsWith('video');
+  const mediaUrl = `${API_URL}/media/${item.id}`;
+  const isOwner = currentUsername && item.username === currentUsername;
+  const displayName = item.username || 'Unknown';
+  const initial = displayName[0]?.toUpperCase() || '?';
+
+  const handleImageLoad = (event: any) => {
+    const { width: imgWidth, height: imgHeight } = event.nativeEvent.source;
+    if (imgWidth && imgHeight) {
+      setMediaHeight(screenWidth * (imgHeight / imgWidth));
+    }
+  };
+
+  const handleVideoReadyForDisplay = (event: any) => {
+    if (event.naturalSize) {
+      const { width: vidWidth, height: vidHeight } = event.naturalSize;
+      if (vidWidth && vidHeight) {
+        setMediaHeight(screenWidth * (vidHeight / vidWidth));
+      }
+    }
+  };
+
+  return (
+    <View style={styles.card}>
+      <View style={styles.cardHeader}>
+        <TouchableOpacity
+          style={styles.userInfo}
+          onPress={() => item.username && onUserPress(item.username)}
+        >
+          <View style={styles.avatar}>
+            <Text style={styles.avatarText}>{initial}</Text>
+          </View>
+          <Text style={styles.username}>{displayName}</Text>
+        </TouchableOpacity>
+        <Text style={styles.dateText}>
+          {new Date(item.uploaded_at).toLocaleDateString()}
+        </Text>
+        {isOwner && (
+          <TouchableOpacity
+            style={styles.deleteButton}
+            onPress={() => onDelete(item.id)}
+          >
+            <IconSymbol name="trash.fill" size={18} color="#ff3b30" />
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {isVideo ? (
+        <Video
+          source={{ uri: mediaUrl }}
+          style={[styles.mediaContent, { height: mediaHeight }]}
+          useNativeControls
+          resizeMode={ResizeMode.CONTAIN}
+          isLooping
+          shouldPlay={false}
+          onReadyForDisplay={handleVideoReadyForDisplay}
+        />
+      ) : (
+        <Image
+          source={{ uri: mediaUrl }}
+          style={[styles.mediaContent, { height: mediaHeight }]}
+          resizeMode="cover"
+          onLoad={handleImageLoad}
+        />
+      )}
+
+      {/* Footer Actions */}
+      <View style={styles.cardFooter}>
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={styles.actionButton} onPress={() => onLike(item.id)}>
+            <IconSymbol
+              name={item.is_liked ? "heart.fill" : "heart"}
+              size={26}
+              color={item.is_liked ? "#ff3b30" : "#ffffff"}
+            />
+            <Text style={styles.actionText}>{item.likes_count || 0}</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={styles.actionButton} onPress={() => onComments(item.id)}>
+            <IconSymbol name="bubble.right" size={24} color="#ffffff" />
+            <Text style={styles.actionText}>{item.comments_count || 0}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
 }
 
 export default function FeedScreen() {
@@ -169,76 +275,16 @@ export default function FeedScreen() {
     router.push({ pathname: '/user-profile' as any, params: { username } });
   };
 
-  const renderItem = ({ item }: { item: MediaItem }) => {
-    const isVideo = item.content_type.startsWith('video');
-    const mediaUrl = `${API_URL}/media/${item.id}`;
-    const isOwner = currentUsername && item.username === currentUsername;
-    const displayName = item.username || 'Unknown';
-    const initial = displayName[0]?.toUpperCase() || '?';
-
-    return (
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <TouchableOpacity
-            style={styles.userInfo}
-            onPress={() => item.username && handleUserPress(item.username)}
-          >
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>{initial}</Text>
-            </View>
-            <Text style={styles.username}>{displayName}</Text>
-          </TouchableOpacity>
-          <Text style={styles.dateText}>
-            {new Date(item.uploaded_at).toLocaleDateString()}
-          </Text>
-          {isOwner && (
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={() => handleDelete(item.id)}
-            >
-              <IconSymbol name="trash.fill" size={18} color="#ff3b30" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {isVideo ? (
-          <Video
-            source={{ uri: mediaUrl }}
-            style={styles.mediaContent}
-            useNativeControls
-            resizeMode={ResizeMode.CONTAIN}
-            isLooping
-            shouldPlay={false} // Prevent all videos from playing at once
-          />
-        ) : (
-          <Image
-            source={{ uri: mediaUrl }}
-            style={styles.mediaContent}
-            resizeMode="contain"
-          />
-        )}
-
-        {/* Footer Actions */}
-        <View style={styles.cardFooter}>
-          <View style={styles.actionButtons}>
-            <TouchableOpacity style={styles.actionButton} onPress={() => handleLike(item.id)}>
-              <IconSymbol
-                name={item.is_liked ? "heart.fill" : "heart"}
-                size={26}
-                color={item.is_liked ? "#ff3b30" : "#ffffff"}
-              />
-              <Text style={styles.actionText}>{item.likes_count || 0}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity style={styles.actionButton} onPress={() => openComments(item.id)}>
-              <IconSymbol name="bubble.right" size={24} color="#ffffff" />
-              <Text style={styles.actionText}>{item.comments_count || 0}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    );
-  };
+  const renderItem = ({ item }: { item: MediaItem }) => (
+    <FeedItem
+      item={item}
+      currentUsername={currentUsername}
+      onDelete={handleDelete}
+      onLike={handleLike}
+      onComments={openComments}
+      onUserPress={handleUserPress}
+    />
+  );
 
   return (
     <SafeAreaView style={styles.container}>
@@ -332,8 +378,7 @@ const styles = StyleSheet.create({
     padding: 6,
   },
   mediaContent: {
-    width: width,
-    height: width, // Square aspect ratio container, but content scales
+    width: screenWidth,
     backgroundColor: '#000000',
   },
   cardFooter: {
