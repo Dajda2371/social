@@ -9,6 +9,7 @@ class User(Base):
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
+    profile_picture = Column(String, nullable=True)
     
     media = relationship("Media", back_populates="user")
     likes = relationship("Like", back_populates="user")

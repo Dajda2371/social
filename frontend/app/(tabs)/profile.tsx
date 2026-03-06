@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator, Platform } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator, Platform, ActionSheetIOS } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
+import * as ImagePicker from 'expo-image-picker';
 import { Video, ResizeMode } from 'expo-av';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 
@@ -38,6 +39,8 @@ export default function ProfileScreen() {
     const [username, setUsername] = useState<string>('');
     const [mediaList, setMediaList] = useState<MediaItem[]>([]);
     const [loading, setLoading] = useState(true);
+    const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+    const [profilePictureKey, setProfilePictureKey] = useState(0);
 
     const loadProfile = async () => {
         try {
@@ -49,6 +52,13 @@ export default function ProfileScreen() {
                     // Fetch user's media
                     const response = await axios.get(`${API_URL}/user/${decoded.sub}/media`);
                     setMediaList(response.data.media.reverse());
+
+                    // Check if user has profile picture
+                    if (response.data.user?.has_profile_picture) {
+                        setProfilePictureUrl(`${API_URL}/user/${decoded.sub}/picture`);
+                    } else {
+                        setProfilePictureUrl(null);
+                    }
                 }
             }
         } catch (error) {
@@ -67,6 +77,124 @@ export default function ProfileScreen() {
             loadProfile();
         }, [])
     );
+
+    const pickAndUploadProfilePicture = async () => {
+        try {
+            const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+            if (status !== 'granted') {
+                Alert.alert('Permission Required', 'We need access to your photo library to set a profile picture.');
+                return;
+            }
+
+            const result = await ImagePicker.launchImageLibraryAsync({
+                mediaTypes: ['images'],
+                allowsEditing: true,
+                aspect: [1, 1],
+                quality: 0.8,
+            });
+
+            if (result.canceled) return;
+
+            const asset = result.assets[0];
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) return;
+
+            const formData = new FormData();
+            const uri = asset.uri;
+            const filename = uri.split('/').pop() || 'profile.jpg';
+            const match = /\.(\w+)$/.exec(filename);
+            const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+            if (Platform.OS === 'web') {
+                const res = await fetch(uri);
+                const blob = await res.blob();
+                formData.append('file', blob, filename);
+            } else {
+                formData.append('file', {
+                    uri: Platform.OS === 'ios' ? uri.replace('file://', '') : uri,
+                    name: filename,
+                    type,
+                } as any);
+            }
+
+            await axios.post(`${API_URL}/profile/picture`, formData, {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            // Refresh profile picture with cache-busting key
+            setProfilePictureUrl(`${API_URL}/user/${username}/picture`);
+            setProfilePictureKey(prev => prev + 1);
+        } catch (error: any) {
+            console.error('Upload profile picture error:', error);
+            Alert.alert('Error', error.response?.data?.detail || 'Failed to upload profile picture');
+        }
+    };
+
+    const removeProfilePicture = async () => {
+        try {
+            const token = await AsyncStorage.getItem('userToken');
+            if (!token) return;
+
+            await axios.delete(`${API_URL}/profile/picture`, {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+
+            setProfilePictureUrl(null);
+        } catch (error: any) {
+            console.error('Remove profile picture error:', error);
+            Alert.alert('Error', error.response?.data?.detail || 'Failed to remove profile picture');
+        }
+    };
+
+    const handleAvatarPress = () => {
+        const hasProfilePic = !!profilePictureUrl;
+
+        if (Platform.OS === 'ios') {
+            const options = hasProfilePic
+                ? ['Change Profile Picture', 'Remove Profile Picture', 'Cancel']
+                : ['Set Profile Picture', 'Cancel'];
+            const cancelIndex = options.length - 1;
+            const destructiveIndex = hasProfilePic ? 1 : undefined;
+
+            ActionSheetIOS.showActionSheetWithOptions(
+                { options, cancelButtonIndex: cancelIndex, destructiveButtonIndex: destructiveIndex },
+                (buttonIndex) => {
+                    if (buttonIndex === 0) {
+                        pickAndUploadProfilePicture();
+                    } else if (hasProfilePic && buttonIndex === 1) {
+                        removeProfilePicture();
+                    }
+                }
+            );
+        } else if (Platform.OS === 'web') {
+            if (hasProfilePic) {
+                const action = window.prompt('Type "change" to change your profile picture, or "remove" to remove it:');
+                if (action?.toLowerCase() === 'change') {
+                    pickAndUploadProfilePicture();
+                } else if (action?.toLowerCase() === 'remove') {
+                    removeProfilePicture();
+                }
+            } else {
+                pickAndUploadProfilePicture();
+            }
+        } else {
+            // Android
+            const options = hasProfilePic
+                ? [
+                    { text: 'Cancel', style: 'cancel' as const },
+                    { text: 'Remove', style: 'destructive' as const, onPress: removeProfilePicture },
+                    { text: 'Change', onPress: pickAndUploadProfilePicture },
+                ]
+                : [
+                    { text: 'Cancel', style: 'cancel' as const },
+                    { text: 'Set Profile Picture', onPress: pickAndUploadProfilePicture },
+                ];
+            Alert.alert('Profile Picture', 'What would you like to do?', options);
+        }
+    };
 
     const handleDelete = async (mediaId: number) => {
         Alert.alert(
@@ -163,11 +291,26 @@ export default function ProfileScreen() {
     const ListHeader = () => (
         <>
             <View style={styles.profileSection}>
-                <View style={styles.avatarBig}>
-                    <Text style={styles.avatarText}>
-                        {username ? username[0].toUpperCase() : '?'}
-                    </Text>
-                </View>
+                <TouchableOpacity onPress={handleAvatarPress} activeOpacity={0.7}>
+                    <View style={styles.avatarContainer}>
+                        {profilePictureUrl ? (
+                            <Image
+                                key={profilePictureKey}
+                                source={{ uri: `${profilePictureUrl}?v=${profilePictureKey}` }}
+                                style={styles.avatarImage}
+                            />
+                        ) : (
+                            <View style={styles.avatarBig}>
+                                <Text style={styles.avatarText}>
+                                    {username ? username[0].toUpperCase() : '?'}
+                                </Text>
+                            </View>
+                        )}
+                        <View style={styles.cameraIconContainer}>
+                            <IconSymbol name="camera.fill" size={14} color="#ffffff" />
+                        </View>
+                    </View>
+                </TouchableOpacity>
                 <Text style={styles.username}>{username}</Text>
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
@@ -238,14 +381,24 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingVertical: 25,
     },
+    avatarContainer: {
+        position: 'relative',
+        marginBottom: 12,
+    },
     avatarBig: {
         width: 90,
         height: 90,
         borderRadius: 45,
         backgroundColor: '#1c1c1e',
-        marginBottom: 12,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#333333',
+    },
+    avatarImage: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
         borderWidth: 2,
         borderColor: '#333333',
     },
@@ -253,6 +406,19 @@ const styles = StyleSheet.create({
         fontSize: 36,
         fontWeight: 'bold',
         color: '#0a84ff',
+    },
+    cameraIconContainer: {
+        position: 'absolute',
+        bottom: 0,
+        right: 0,
+        width: 28,
+        height: 28,
+        borderRadius: 14,
+        backgroundColor: '#0a84ff',
+        justifyContent: 'center',
+        alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#000000',
     },
     username: {
         fontSize: 24,

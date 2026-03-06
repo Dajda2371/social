@@ -22,6 +22,7 @@ export default function UserProfileScreen() {
     const [mediaList, setMediaList] = useState<MediaItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [mediaCount, setMediaCount] = useState(0);
+    const [hasProfilePicture, setHasProfilePicture] = useState(false);
 
     useEffect(() => {
         const fetchUserMedia = async () => {
@@ -30,6 +31,7 @@ export default function UserProfileScreen() {
                 const media = response.data.media.reverse();
                 setMediaList(media);
                 setMediaCount(media.length);
+                setHasProfilePicture(response.data.user?.has_profile_picture || false);
             } catch (error) {
                 console.error('Fetch user media error:', error);
             } finally {
@@ -79,11 +81,18 @@ export default function UserProfileScreen() {
             </View>
 
             <View style={styles.profileSection}>
-                <View style={styles.avatarBig}>
-                    <Text style={styles.avatarText}>
-                        {username ? username[0].toUpperCase() : '?'}
-                    </Text>
-                </View>
+                {hasProfilePicture ? (
+                    <Image
+                        source={{ uri: `${API_URL}/user/${username}/picture` }}
+                        style={styles.avatarImage}
+                    />
+                ) : (
+                    <View style={styles.avatarBig}>
+                        <Text style={styles.avatarText}>
+                            {username ? username[0].toUpperCase() : '?'}
+                        </Text>
+                    </View>
+                )}
                 <Text style={styles.username}>{username}</Text>
                 <View style={styles.statsRow}>
                     <View style={styles.statItem}>
@@ -153,6 +162,14 @@ const styles = StyleSheet.create({
         marginBottom: 12,
         justifyContent: 'center',
         alignItems: 'center',
+        borderWidth: 2,
+        borderColor: '#333333',
+    },
+    avatarImage: {
+        width: 90,
+        height: 90,
+        borderRadius: 45,
+        marginBottom: 12,
         borderWidth: 2,
         borderColor: '#333333',
     },

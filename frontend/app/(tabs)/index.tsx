@@ -17,6 +17,7 @@ interface MediaItem {
   uploaded_at: string;
   user_id: number | null;
   username: string | null;
+  has_profile_picture: boolean;
   likes_count: number;
   comments_count: number;
   is_liked: boolean;
@@ -96,7 +97,14 @@ function FeedItem({
           onPress={() => item.username && onUserPress(item.username)}
         >
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>{initial}</Text>
+            {item.has_profile_picture && item.username ? (
+              <Image
+                source={{ uri: `${API_URL}/user/${item.username}/picture` }}
+                style={styles.avatarImg}
+              />
+            ) : (
+              <Text style={styles.avatarText}>{initial}</Text>
+            )}
           </View>
           <Text style={styles.username}>{displayName}</Text>
         </TouchableOpacity>
@@ -372,6 +380,11 @@ const styles = StyleSheet.create({
     color: '#0a84ff',
     fontSize: 14,
     fontWeight: 'bold',
+  },
+  avatarImg: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
   },
   username: {
     color: '#ffffff',

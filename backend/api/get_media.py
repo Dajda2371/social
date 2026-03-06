@@ -21,8 +21,10 @@ def list_media(skip: int = 0, limit: int = 100, db: Session = Depends(database.g
     result = []
     for m in media_list:
         username = None
+        has_profile_picture = False
         if m.user:
             username = m.user.username
+            has_profile_picture = bool(m.user.profile_picture)
             
         is_liked = False
         if current_user:
@@ -35,6 +37,7 @@ def list_media(skip: int = 0, limit: int = 100, db: Session = Depends(database.g
             "uploaded_at": m.uploaded_at,
             "user_id": m.user_id,
             "username": username,
+            "has_profile_picture": has_profile_picture,
             "likes_count": len(m.likes),
             "comments_count": len(m.comments),
             "is_liked": is_liked
@@ -52,7 +55,8 @@ def get_user_media(username: str, db: Session = Depends(database.get_db), curren
     return {
         "user": {
             "id": user.id,
-            "username": user.username
+            "username": user.username,
+            "has_profile_picture": bool(user.profile_picture)
         },
         "media": [
             {
