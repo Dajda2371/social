@@ -63,16 +63,21 @@ function FeedItem({
   const displayName = item.username || 'Unknown';
   const initial = displayName[0]?.toUpperCase() || '?';
 
-  const handleImageLoad = (event: any) => {
-    // In React Native Web, event.nativeEvent.source might be undefined.
-    // The width/height might be directly on event.nativeEvent or on the target itself.
-    let imgWidth = event.nativeEvent?.source?.width || event.nativeEvent?.width || event.target?.naturalWidth || event.currentTarget?.naturalWidth;
-    let imgHeight = event.nativeEvent?.source?.height || event.nativeEvent?.height || event.target?.naturalHeight || event.currentTarget?.naturalHeight;
-
-    if (imgWidth && imgHeight && imgWidth > 0) {
-      setMediaHeight(screenWidth * (imgHeight / imgWidth));
+  useEffect(() => {
+    if (!isVideo) {
+      Image.getSize(
+        mediaUrl,
+        (width, height) => {
+          if (width && height && width > 0) {
+            setMediaHeight(screenWidth * (height / width));
+          }
+        },
+        (error) => {
+          console.error('Failed to get image dimension:', error);
+        }
+      );
     }
-  };
+  }, [mediaUrl, isVideo]);
 
   const handleVideoReadyForDisplay = (event: any) => {
     let vidWidth = event.naturalSize?.width || event.nativeEvent?.naturalSize?.width || event.target?.videoWidth;
@@ -124,7 +129,6 @@ function FeedItem({
           source={{ uri: mediaUrl }}
           style={[styles.mediaContent, { height: mediaHeight }]}
           resizeMode="cover"
-          onLoad={handleImageLoad}
         />
       )}
 
