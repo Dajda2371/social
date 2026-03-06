@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator, Platform, ActionSheetIOS } from 'react-native';
+import { StyleSheet, View, Text, TouchableOpacity, SafeAreaView, Alert, FlatList, Image, Dimensions, ActivityIndicator, Platform, ActionSheetIOS, Modal } from 'react-native';
 import { useRouter, useFocusEffect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -41,6 +41,7 @@ export default function ProfileScreen() {
     const [loading, setLoading] = useState(true);
     const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
     const [profilePictureKey, setProfilePictureKey] = useState(0);
+    const [webModalVisible, setWebModalVisible] = useState(false);
 
     const loadProfile = async () => {
         try {
@@ -171,12 +172,7 @@ export default function ProfileScreen() {
             );
         } else if (Platform.OS === 'web') {
             if (hasProfilePic) {
-                const action = window.prompt('Type "change" to change your profile picture, or "remove" to remove it:');
-                if (action?.toLowerCase() === 'change') {
-                    pickAndUploadProfilePicture();
-                } else if (action?.toLowerCase() === 'remove') {
-                    removeProfilePicture();
-                }
+                setWebModalVisible(true);
             } else {
                 pickAndUploadProfilePicture();
             }
@@ -358,6 +354,43 @@ export default function ProfileScreen() {
                     showsVerticalScrollIndicator={false}
                 />
             )}
+
+            <Modal
+                animationType="fade"
+                transparent={true}
+                visible={webModalVisible}
+                onRequestClose={() => setWebModalVisible(false)}
+            >
+                <View style={styles.modalOverlay}>
+                    <View style={styles.modalContent}>
+                        <Text style={styles.modalTitle}>Profile Picture</Text>
+                        <TouchableOpacity
+                            style={styles.modalButton}
+                            onPress={() => {
+                                setWebModalVisible(false);
+                                pickAndUploadProfilePicture();
+                            }}
+                        >
+                            <Text style={styles.modalButtonText}>Change Picture</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={[styles.modalButton, styles.modalButtonDestructive]}
+                            onPress={() => {
+                                setWebModalVisible(false);
+                                removeProfilePicture();
+                            }}
+                        >
+                            <Text style={styles.modalButtonDestructiveText}>Remove Picture</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={styles.modalCancelButton}
+                            onPress={() => setWebModalVisible(false)}
+                        >
+                            <Text style={styles.modalCancelText}>Cancel</Text>
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            </Modal>
         </SafeAreaView>
     );
 }
@@ -512,5 +545,55 @@ const styles = StyleSheet.create({
     emptySubText: {
         color: '#555555',
         fontSize: 14,
+    },
+    modalOverlay: {
+        flex: 1,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    modalContent: {
+        width: 300,
+        backgroundColor: '#1c1c1e',
+        borderRadius: 14,
+        padding: 20,
+        alignItems: 'center',
+    },
+    modalTitle: {
+        fontSize: 18,
+        fontWeight: 'bold',
+        color: '#ffffff',
+        marginBottom: 20,
+    },
+    modalButton: {
+        width: '100%',
+        paddingVertical: 15,
+        borderBottomWidth: 1,
+        borderBottomColor: '#333333',
+        alignItems: 'center',
+    },
+    modalButtonDestructive: {
+        borderBottomWidth: 0,
+        marginBottom: 10,
+    },
+    modalButtonText: {
+        fontSize: 16,
+        color: '#0a84ff',
+    },
+    modalButtonDestructiveText: {
+        fontSize: 16,
+        color: '#ff3b30',
+    },
+    modalCancelButton: {
+        width: '100%',
+        paddingVertical: 12,
+        backgroundColor: '#333333',
+        borderRadius: 10,
+        alignItems: 'center',
+    },
+    modalCancelText: {
+        fontSize: 16,
+        color: '#ffffff',
+        fontWeight: 'bold',
     },
 });
